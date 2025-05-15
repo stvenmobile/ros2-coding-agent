@@ -1,0 +1,10 @@
+Already up to date.
+/home/steve/mcp/mcp.py:33: LangChainDeprecationWarning: LangChain agents will continue to be supported, but it is recommended for new use cases to be built with LangGraph. LangGraph offers a more flexible and full-featured framework for building agents, including support for tool-calling, persistence of state, and human-in-the-loop workflows. For details, refer to the `LangGraph documentation <https://langchain-ai.github.io/langgraph/>`_ as well as guides for `Migrating from AgentExecutor <https://python.langchain.com/docs/how_to/migrate_agent/>`_ and LangGraph's `Pre-built ReAct agent <https://langchain-ai.github.io/langgraph/how-tos/create-react-agent/>`_.
+  agent_executor = initialize_agent(
+Pulling latest code from GitHub...
+MCP AI Agent ready. Monitoring: /home/steve/mecca_ws/src
+>> Traceback (most recent call last):
+  File "/home/steve/mcp/mcp.py", line 45, in <module>
+    user_input = input(">> ")
+                 ^^^^^^^^^^^^
+EOFError: EOF when reading a line
