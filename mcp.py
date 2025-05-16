@@ -1,74 +1,81 @@
+# === File: mcp.py ===
 import os
-import subprocess
 from pathlib import Path
-from typing import Optional, Type
-
-from langchain.agents import initialize_agent, AgentType, Tool, AgentExecutor
-from langchain.tools.base import BaseTool
-from langchain_core.callbacks.manager import CallbackManagerForToolRun
+from datetime import datetime
+from langchain.agents import initialize_agent, AgentType
+from langchain.agents.agent import AgentExecutor
+from langchain_community.tools import ReadFileTool, WriteFileTool, ListDirectoryTool
 from langchain_openai import ChatOpenAI
-from langchain_community.tools import ReadFileTool, ListDirectoryTool
-from langchain_community.agent_toolkits.file_management.toolkit import FileManagementToolkit
+from filetracker import FileChangeTracker
 
+import tools
 
-# Custom tool for flake8
-class RunFlake8Tool(BaseTool):
-    name: str = "run_flake8"
-    description: str = "Run flake8 linter on a Python file and return the output."
-    args_schema: Type = None
+from config import BASE_DIR   # base directory for all file requests
 
-    def _run(
-        self, file_path: str, run_manager: Optional[CallbackManagerForToolRun] = None
-    ) -> str:
-        full_path = os.path.expanduser(f"~/mecca_ws/src/{file_path}")
-        try:
-            result = subprocess.run(
-                ["flake8", full_path],
-                capture_output=True,
-                text=True,
-                check=False
-            )
-            return result.stdout or "No issues found."
-        except Exception as e:
-            return f"Error running flake8: {e}"
+# Set up logging
+log_file = Path("mcp_command.log")
+def log_command(command: str):
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with open(log_file, "a") as f:
+        f.write(f"[{timestamp}] {command}\n")
 
-    def _arun(self, *args, **kwargs):
-        raise NotImplementedError("Async not supported.")
+# Load OpenAI API key from a file
+key_file = Path("/etc/mcp/conf/.apikey")
 
+if key_file.exists():
+    api_key = key_file.read_text().strip()
+else:
+    raise FileNotFoundError(f"API key file not found: {key_file}")
 
-# Load OpenAI API key from file
-api_key_file = Path.home() / "mcp" / "openai_apikey.txt"
-if not api_key_file.exists():
-    raise FileNotFoundError(f"API key file not found at {api_key_file}")
-api_key = api_key_file.read_text().strip()
-
-# Initialize the language model
+# Initialize language model
 llm = ChatOpenAI(temperature=0, openai_api_key=api_key)
 
-# Setup tools
-toolkit = FileManagementToolkit(
-    root_dir=str(Path.home() / "mecca_ws" / "src"),
-    selected_tools=["read_file", "list_directory"]
-)
-tools = toolkit.get_tools()
-tools.append(RunFlake8Tool())
+# Tools setup
+read_tool = ReadFileTool(root_dir=BASE_DIR)
+write_tool = tools.WriteFileSingleInputTool()
+list_tool = ListDirectoryTool(root_dir=BASE_DIR)
+flake8_tool = tools.RunFlake8Tool()
+docstyle_tool = tools.RunDocstyleTool()
+tool_list = [read_tool, write_tool, list_tool, flake8_tool, docstyle_tool]
 
 # Initialize agent
 agent_executor: AgentExecutor = initialize_agent(
-    tools=tools,
+    tools=tool_list,
     llm=llm,
     agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
     verbose=True,
+    max_iterations=60,
+    max_execution_time=600,
 )
 
-# Interactive loop
+# File change tracker
+tracker = FileChangeTracker(BASE_DIR)
+tracker.snapshot()
+
 if __name__ == "__main__":
-    print("MCP AI Agent ready. Monitoring ~/mecca_ws/src")
+    print(f"MCP AI Agent ready. Monitoring {BASE_DIR}")
+
     while True:
         try:
             user_input = input(">> ")
+            if not user_input.strip():
+                continue
+            log_command(user_input)
             response = agent_executor.run(user_input)
             print(response)
+
+            # Show file diffs after each command
+            changes = tracker.diff()
+            tracker.snapshot()
+
+            if changes:
+                print(f"\n📄 File changes detected: {len(changes)}")
+                if "verbose" in user_input.lower():
+                    for change_type, path in changes:
+                        print(f"  {change_type:<8} {path}")
+            else:
+                print("\n✅ No file changes detected.")
+
         except KeyboardInterrupt:
             print("\nMCP terminated.")
             break
