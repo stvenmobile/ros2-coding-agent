@@ -1,3 +1,10 @@
 [2025-05-16 14:31:54] list all python file under mecca_driver_node
 [2025-05-16 14:32:47] :ist all python files under mecca_driver_node/mecca_driver_node
 [2025-05-16 15:21:48] run flake8 on navigator/setup.py
+[2025-05-17 12:30:00] run workspace_checker on /home/steve/mecca_ws/src
+[2025-05-17 13:55:28] list all python files in navigator
+[2025-05-17 14:59:14] list all python files under navigator
+[2025-05-17 15:00:13] list_rec all python files under navigator
+[2025-05-17 15:10:05] list_recursive all python files under navigator
+[2025-05-17 15:10:55] list_rec under vl53l1x_sensor
+[2025-05-17 15:11:37] list_rec all files under mecca_driver_node

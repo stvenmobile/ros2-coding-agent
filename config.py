@@ -1,4 +1,5 @@
 # === File: config.py ===
 from pathlib import Path
 
-BASE_DIR = str(Path.home() / "mecca_ws" / "src")
+WKSPACE = str(Path.home() / "mecca_ws" / "src")
+EXCLUDE_DIRS = ["build", "install", "log", ".git", ".vscode", "__pycache__"]

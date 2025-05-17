@@ -4,15 +4,14 @@ import hashlib
 from pathlib import Path
 import json
 from datetime import datetime
+from config import WKSPACE, EXCLUDE_DIRS
 
-# Define the base directory for all file requests
-from config import BASE_DIR
 
 
 class FileChangeTracker:
-    def __init__(self, BASE_DIR):
-        self.BASE_DIR = Path(BASE_DIR).expanduser().resolve()
-        self.snapshot_file = self.BASE_DIR / ".file_snapshot.json"
+    def __init__(self, WKSPACE):
+        self.WKSPACE = Path(WKSPACE).expanduser().resolve()
+        self.snapshot_file = self.WKSPACE / ".file_snapshot.json"
 
     def _hash_file(self, path):
         try:
@@ -23,11 +22,15 @@ class FileChangeTracker:
 
     def snapshot(self):
         snapshot = {}
-        for root, _, files in os.walk(self.BASE_DIR):
+
+        for root, dirs, files in os.walk(self.WKSPACE):
+            # Exclude directories
+            dirs[:] = [d for d in dirs if d not in EXCLUDE_DIRS]
+
             for fname in files:
                 if fname.endswith(".py"):
                     fpath = Path(root) / fname
-                    rel_path = str(fpath.relative_to(self.BASE_DIR))
+                    rel_path = str(fpath.relative_to(self.WKSPACE))
                     snapshot[rel_path] = self._hash_file(fpath)
         with open(self.snapshot_file, "w") as f:
             json.dump(snapshot, f, indent=2)
@@ -44,11 +47,15 @@ class FileChangeTracker:
         current_snapshot = {}
         changes = []
 
-        for root, _, files in os.walk(self.BASE_DIR):
+
+        for root, dirs, files in os.walk(self.WKSPACE):
+            # Exclude directories
+            dirs[:] = [d for d in dirs if d not in EXCLUDE_DIRS]
+
             for fname in files:
                 if fname.endswith(".py"):
                     fpath = Path(root) / fname
-                    rel_path = str(fpath.relative_to(self.BASE_DIR))
+                    rel_path = str(fpath.relative_to(self.WKSPACE))
                     file_hash = self._hash_file(fpath)
                     current_snapshot[rel_path] = file_hash
 
@@ -71,7 +78,7 @@ class FileChangeTracker:
 
 
 if __name__ == "__main__":
-    tracker = FileChangeTracker(BASE_DIR)
+    tracker = FileChangeTracker(WKSPACE)
     tracker.snapshot()  # Run once to save a snapshot
     print("Changes since last snapshot:")
     tracker.diff(verbose=True)
