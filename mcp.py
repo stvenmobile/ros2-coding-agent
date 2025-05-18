@@ -57,9 +57,9 @@ else:
 llm = ChatOpenAI(temperature=0, openai_api_key=api_key)
 
 # Tools setup
-read_tool = ReadFileTool(root_dir=WKSPACE)
+read_tool = ReadFileTool(root_dir=str(WKSPACE))
 write_tool = tools.WriteFileSingleInputTool()
-list_tool = ListDirectoryTool(root_dir=WKSPACE)
+list_tool = ListDirectoryTool(root_dir=str(WKSPACE))
 flake8_tool = tools.RunFlake8Tool()
 docstyle_tool = tools.RunDocstyleTool()
 tool_list = [read_tool, write_tool, list_tool, flake8_tool, docstyle_tool]
@@ -70,6 +70,7 @@ agent_executor: AgentExecutor = initialize_agent(
     llm=llm,
     agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
     verbose=True,
+    handle_parsing_errors=True,  
     max_iterations=60,
     max_execution_time=600,
 )

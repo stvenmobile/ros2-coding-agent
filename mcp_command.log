@@ -8,3 +8,13 @@
 [2025-05-17 15:10:05] list_recursive all python files under navigator
 [2025-05-17 15:10:55] list_rec under vl53l1x_sensor
 [2025-05-17 15:11:37] list_rec all files under mecca_driver_node
+[2025-05-17 15:41:56] run flake8 on navigator/navigator_node.py
+[2025-05-17 20:52:09] run flake8 on navigator/navigator/navigator_node.py
+[2025-05-17 21:03:50] >> run flake8 on navigator_node.py
+[2025-05-17 21:05:15] run flake8 on navigator_node.py
+[2025-05-17 21:11:29] run flake8 on navigator_node.py
+[2025-05-17 22:15:55] run docstyle on navigator/navigator_node.py
+[2025-05-17 22:21:59] run docstyle on navigator/navigator_node.py propose_only
+[2025-05-17 22:22:39] run docstyle on navigator/navigator_node.py propose_only
+[2025-05-17 22:57:15] run docstyle_propose_only on navigator/navigator_node.py
+[2025-05-17 23:08:03] run docstyle_propose_only on navigator/navigator_node.py
