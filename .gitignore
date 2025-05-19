@@ -1,1 +1,22 @@
+# Ignore Python bytecode
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Ignore virtual environment
+mcp_env/
+
+# Ignore log files
+*.log
+mcp_command.log
+mcp.log
+
+# Ignore backup/editor swap files
+*~
+*.swp
+
+# Ignore VSCode project settings (if used)
+.vscode/
+
+# Ignore secrets (just in case)
 openai_apikey.txt
