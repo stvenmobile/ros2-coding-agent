@@ -6,8 +6,18 @@ import re
 import sys
 from pathlib import Path
 from datetime import datetime
+import warnings
 
 # Third-party packages
+from langchain_core._api.deprecation import LangChainDeprecationWarning
+
+log_output = open("langchain_warnings.log", "a")
+
+def log_warning(message, category, filename, lineno, file=None, line=None):
+    print(f"{filename}:{lineno}: {category.__name__}: {message}", file=log_output)
+
+warnings.showwarning = log_warning
+
 from langchain.agents import initialize_agent, AgentType, AgentExecutor
 from langchain_community.tools import ReadFileTool, WriteFileTool, ListDirectoryTool
 from langchain_openai import ChatOpenAI
