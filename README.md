@@ -28,6 +28,55 @@ mcp/
 
 ---
 
+Installation
+
+Follow these steps to deploy the MCP agent on a fresh Ubuntu (22.04 or 24.04) VM:
+1. Prepare the Virtual Machine
+
+    Recommended: 4 CPU / 8GB RAM
+
+    OS: Ubuntu Noble (for ROS 2 Jazzy compatibility)
+
+2. Install base packages
+
+sudo apt update && sudo apt upgrade -y
+sudo apt install git curl wget openssh-client openssh-server nano net-tools
+
+3. Enable SSH access
+
+sudo systemctl enable ssh
+sudo systemctl start ssh
+
+You can now connect using SSH or Termius.
+4. Set up Git with SSH authentication
+
+ssh-keygen -t ed25519 -C "your_email@example.com"
+cat ~/.ssh/id_ed25519.pub
+
+Copy the key to your GitHub account under Settings → SSH Keys.
+5. Clone the repository
+
+git clone git@github.com:stvenmobile/ros2-coding-agent.git
+cd ros2-coding-agent
+
+6. Set up the Python environment
+
+python3 -m venv mcp_env
+source mcp_env/bin/activate
+pip install -r requirements.txt
+
+7. Add OpenAI API key
+
+sudo mkdir -p /etc/mcp/conf
+sudo nano /etc/mcp/conf/.apikey
+# Paste the line:
+# OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxx
+
+sudo chmod 600 /etc/mcp/conf/.apikey
+
+You're now ready to launch the MCP agent.
+
+
 ## ⚙️ Configuration (config.py)
 
 ```python
