@@ -70,14 +70,14 @@ Follow these steps to deploy the MCP agent on a fresh Ubuntu (22.04 or 24.04) VM
 
 7. Add OpenAI API key
 
-   sudo mkdir -p /etc/mcp/conf
-   sudo nano /etc/mcp/conf/.apikey
-   sudo chmod 600 /etc/mcp/conf/.apikey
+   sudo mkdir -p /etc/mcp/conf  
+   sudo nano /etc/mcp/conf/.apikey  
+   sudo chmod 600 /etc/mcp/conf/.apikey  
 
-API Key format:
-```
-sk-xxxxxxxxxxxxxxxxxxxxxxxx
-```
+   API Key format:
+   ```
+   sk-xxxxxxxxxxxxxxxxxxxxxxxx
+   ```
 
    You're now ready to launch the MCP agent.
 
