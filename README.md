@@ -73,8 +73,8 @@ Follow these steps to deploy the MCP agent on a fresh Ubuntu (22.04 or 24.04) VM
    sudo mkdir -p /etc/mcp/conf
    sudo nano /etc/mcp/conf/.apikey
 
-      *Paste your API key in this format:*
-      *sk-xxxxxxxxxxxxxxxxxxxxxxxx*
+      * Paste your API Key in this format: *
+      * sk-xxxxxxxxxxxxxxxxxxxxxxxx *
 
    sudo chmod 600 /etc/mcp/conf/.apikey
 
