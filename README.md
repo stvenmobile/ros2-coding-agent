@@ -73,10 +73,11 @@ Follow these steps to deploy the MCP agent on a fresh Ubuntu (22.04 or 24.04) VM
    sudo mkdir -p /etc/mcp/conf
    sudo nano /etc/mcp/conf/.apikey
 
-      * Paste your API Key in this format: *
-      * sk-xxxxxxxxxxxxxxxxxxxxxxxx *
+      <small>*Paste your API Key in this format: *</small>
+      <small>*sk-xxxxxxxxxxxxxxxxxxxxxxxx *</small>
 
    sudo chmod 600 /etc/mcp/conf/.apikey
+
 
    You're now ready to launch the MCP agent.
 
@@ -86,7 +87,7 @@ Follow these steps to deploy the MCP agent on a fresh Ubuntu (22.04 or 24.04) VM
 ```python
 from pathlib import Path
 
-WKSPACE = str(Path.home() / "mecca_ws")
+WKSPACE = str(Path.hoe() / "mecca_ws")
 EXCLUDE_DIRS = ["build", "install", "log", ".git"]
 ```
 
