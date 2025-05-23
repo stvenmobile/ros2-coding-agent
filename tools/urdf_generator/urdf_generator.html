@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROS2 URDF Generator Wizard - Fixed Positioning</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(45deg, #2196F3, #21CBF3);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .main-content {
+            display: flex;
+            min-height: 80vh;
+        }
+
+        .form-panel {
+            flex: 1;
+            padding: 30px;
+            background: #f8f9fa;
+            overflow-y: auto;
+        }
+
+        .preview-panel {
+            flex: 1;
+            padding: 30px;
+            background: white;
+            border-left: 1px solid #e0e0e0;
+        }
+
+        .form-section {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .form-section h3 {
+            color: #2196F3;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+            border-bottom: 2px solid #e3f2fd;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #2196F3;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #2196F3, #21CBF3);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: transform 0.2s;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .urdf-output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            border-radius: 10px;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        .validation-status {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .validation-status.valid {
+            background: #e8f5e8;
+            border: 1px solid #4caf50;
+            color: #2e7d32;
+        }
+
+        .validation-status.warning {
+            background: #fff3e0;
+            border: 1px solid #ff9800;
+            color: #ef6c00;
+        }
+
+        .positioning-info {
+            background: #e3f2fd;
+            border: 1px solid #2196F3;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .positioning-info h4 {
+            color: #1976D2;
+            margin-bottom: 10px;
+        }
+
+        .calc-display {
+            font-family: monospace;
+            background: rgba(255,255,255,0.7);
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 ROS2 URDF Generator Wizard</h1>
+            <p>Create accurate URDFs with corrected wheel positioning</p>
+        </div>
+
+        <div class="main-content">
+            <div class="form-panel">
+                <div class="form-section">
+                    <h3>Robot Configuration</h3>
+                    <div class="form-group">
+                        <label for="robotName">Robot Name</label>
+                        <input type="text" id="robotName" value="meccabot" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label for="driveType">Drive Type</label>
+                        <select id="driveType" onchange="updateDriveConfig()">
+                            <option value="mecanum">Mecanum Drive (4 wheels)</option>
+                            <option value="differential">Differential Drive (2 wheels)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Chassis Dimensions</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="chassisLength">Length (m)</label>
+                            <input type="number" id="chassisLength" value="0.275" step="0.001" onchange="updatePreview()">
+                        </div>
+                        <div class="form-group">
+                            <label for="chassisWidth">Width (m)</label>
+                            <input type="number" id="chassisWidth" value="0.145" step="0.001" onchange="updatePreview()">
+                        </div>
+                        <div class="form-group">
+                            <label for="chassisHeight">Height (m)</label>
+                            <input type="number" id="chassisHeight" value="0.125" step="0.001" onchange="updatePreview()">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="chassisMass">Mass (kg)</label>
+                            <input type="number" id="chassisMass" value="5.0" step="0.1" onchange="updatePreview()">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Wheel Configuration</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="wheelRadius">Wheel Radius (m)</label>
+                            <input type="number" id="wheelRadius" value="0.050" step="0.001" onchange="updatePreview()">
+                        </div>
+                        <div class="form-group">
+                            <label for="wheelThickness">Wheel Thickness (m)</label>
+                            <input type="number" id="wheelThickness" value="0.03" step="0.001" onchange="updatePreview()">
+                        </div>
+                        <div class="form-group">
+                            <label for="wheelMass">Wheel Mass (kg)</label>
+                            <input type="number" id="wheelMass" value="0.5" step="0.1" onchange="updatePreview()">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="groundClearance">Ground Clearance (m)</label>
+                            <input type="number" id="groundClearance" value="0.033" step="0.001" onchange="updatePreview()">
+                        </div>
+                        <div class="form-group">
+                            <label for="wheelZOffset">Wheel Z-Offset (m)</label>
+                            <input type="number" id="wheelZOffset" value="0.017" step="0.001" onchange="updatePreview()">
+                        </div>
+                    </div>
+                    
+                    <div id="mecanumConfig">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="wheelSeparationLength">Wheelbase (front-rear) (m)</label>
+                                <input type="number" id="wheelSeparationLength" value="0.175" step="0.001" onchange="updatePreview()">
+                            </div>
+                            <div class="form-group">
+                                <label for="wheelSeparationWidth">Track Width (left-right) (m)</label>
+                                <input type="number" id="wheelSeparationWidth" value="0.175" step="0.001" onchange="updatePreview()">
+                            </div>
+                        </div>
+                    </div>
+                    <div id="differentialConfig" style="display:none;">
+                        <div class="form-group">
+                            <label for="wheelSeparation">Wheel Separation (m)</label>
+                            <input type="number" id="wheelSeparation" value="0.22" step="0.001" onchange="updatePreview()">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Actions</h3>
+                    <button class="btn" onclick="generateURDF()">Generate URDF</button>
+                    <button class="btn" onclick="downloadURDF()">Download URDF</button>
+                </div>
+            </div>
+
+            <div class="preview-panel">
+                <div class="validation-status valid" id="validationStatus">
+                    ✅ Configuration is valid
+                </div>
+
+                <div class="positioning-info">
+                    <h4>Positioning Calculations</h4>
+                    <div id="positioningCalcs">
+                        <div class="calc-display">
+                            Ground to chassis bottom: 33mm<br>
+                            Ground to axle centers: 50mm<br>
+                            Ground to wheel bottoms: 0mm ✅
+                        </div>
+                    </div>
+                </div>
+
+                <h3>Generated URDF</h3>
+                <div class="urdf-output" id="urdfOutput">
+                    Click "Generate URDF" to create your robot description.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables to store current configuration
+        let robotConfig = {
+            name: 'meccabot',
+            driveType: 'mecanum',
+            chassis: {
+                length: 0.275,
+                width: 0.145,
+                height: 0.125,
+                mass: 5.0
+            },
+            wheels: {
+                radius: 0.050,
+                thickness: 0.03,
+                mass: 0.5,
+                separationLength: 0.175,
+                separationWidth: 0.175,
+                separation: 0.22,
+                zOffset: 0.017
+            },
+            groundClearance: 0.033
+        };
+
+        function updateDriveConfig() {
+            const driveType = document.getElementById('driveType').value;
+            robotConfig.driveType = driveType;
+            
+            if (driveType === 'mecanum') {
+                document.getElementById('mecanumConfig').style.display = 'block';
+                document.getElementById('differentialConfig').style.display = 'none';
+            } else {
+                document.getElementById('mecanumConfig').style.display = 'none';
+                document.getElementById('differentialConfig').style.display = 'block';
+            }
+            
+            updatePreview();
+        }
+
+        function updateConfigFromInputs() {
+            robotConfig.name = document.getElementById('robotName').value;
+            robotConfig.driveType = document.getElementById('driveType').value;
+            
+            robotConfig.chassis.length = parseFloat(document.getElementById('chassisLength').value);
+            robotConfig.chassis.width = parseFloat(document.getElementById('chassisWidth').value);
+            robotConfig.chassis.height = parseFloat(document.getElementById('chassisHeight').value);
+            robotConfig.chassis.mass = parseFloat(document.getElementById('chassisMass').value);
+            
+            robotConfig.wheels.radius = parseFloat(document.getElementById('wheelRadius').value);
+            robotConfig.wheels.thickness = parseFloat(document.getElementById('wheelThickness').value);
+            robotConfig.wheels.mass = parseFloat(document.getElementById('wheelMass').value);
+            robotConfig.wheels.separationLength = parseFloat(document.getElementById('wheelSeparationLength').value);
+            robotConfig.wheels.separationWidth = parseFloat(document.getElementById('wheelSeparationWidth').value);
+            robotConfig.wheels.separation = parseFloat(document.getElementById('wheelSeparation').value);
+            robotConfig.wheels.zOffset = parseFloat(document.getElementById('wheelZOffset').value);
+            
+            robotConfig.groundClearance = parseFloat(document.getElementById('groundClearance').value);
+        }
+
+        function updatePreview() {
+            updateConfigFromInputs();
+            updatePositioningCalculations();
+            validateConfiguration();
+        }
+
+        function updatePositioningCalculations() {
+            const groundClearance = robotConfig.groundClearance * 1000; // Convert to mm
+            const wheelZOffset = robotConfig.wheels.zOffset * 1000;
+            const wheelRadius = robotConfig.wheels.radius * 1000;
+            
+            const chassisBottom = groundClearance;
+            const axleCenters = groundClearance + wheelZOffset;
+            const wheelBottoms = axleCenters - wheelRadius;
+            
+            const calcsDiv = document.getElementById('positioningCalcs');
+            const status = Math.abs(wheelBottoms) < 1 ? '✅' : '❌';
+            
+            calcsDiv.innerHTML = `
+                <div class="calc-display">
+                    Ground to chassis bottom: ${chassisBottom.toFixed(1)}mm<br>
+                    Ground to axle centers: ${axleCenters.toFixed(1)}mm<br>
+                    Ground to wheel bottoms: ${wheelBottoms.toFixed(1)}mm ${status}
+                </div>
+            `;
+        }
+
+        function validateConfiguration() {
+            const status = document.getElementById('validationStatus');
+            const warnings = [];
+            
+            // Check positioning logic
+            const wheelBottom = robotConfig.groundClearance + robotConfig.wheels.zOffset - robotConfig.wheels.radius;
+            if (Math.abs(wheelBottom) > 0.001) {
+                warnings.push(`Wheels don't touch ground properly (wheel bottom at ${(wheelBottom*1000).toFixed(1)}mm)`);
+            }
+            
+            // Check for reasonable dimensions
+            if (robotConfig.chassis.length < 0.1 || robotConfig.chassis.length > 2.0) {
+                warnings.push('Chassis length seems unrealistic');
+            }
+            
+            if (robotConfig.wheels.radius < 0.01 || robotConfig.wheels.radius > 0.5) {
+                warnings.push('Wheel radius seems unrealistic');
+            }
+            
+            // Check wheel separation vs chassis size
+            if (robotConfig.driveType === 'mecanum') {
+                if (robotConfig.wheels.separationWidth > robotConfig.chassis.width) {
+                    warnings.push('Wheel track width exceeds chassis width');
+                }
+                if (robotConfig.wheels.separationLength > robotConfig.chassis.length) {
+                    warnings.push('Wheelbase exceeds chassis length');
+                }
+            }
+            
+            if (warnings.length === 0) {
+                status.className = 'validation-status valid';
+                status.textContent = '✅ Configuration is valid';
+            } else {
+                status.className = 'validation-status warning';
+                status.textContent = '⚠️ ' + warnings.join(', ');
+            }
+        }
+
+        function generateURDF() {
+            updateConfigFromInputs();
+            
+            const urdf = `<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro" name="${robotConfig.name}_robot">
+
+  <xacro:include filename="inertial_macros.xacro"/>
+
+  <!-- Parameters -->
+  <xacro:property name="wheel_radius" value="${robotConfig.wheels.radius}"/>
+  <xacro:property name="wheel_thickness" value="${robotConfig.wheels.thickness}"/>
+  <xacro:property name="chassis_length" value="${robotConfig.chassis.length}"/>
+  <xacro:property name="chassis_width" value="${robotConfig.chassis.width}"/>
+  <xacro:property name="chassis_height" value="${robotConfig.chassis.height}"/>
+  <xacro:property name="ground_clearance" value="${robotConfig.groundClearance}"/>
+  <xacro:property name="wheel_z_offset" value="${robotConfig.wheels.zOffset}"/>
+
+  <!-- Derived positioning parameters -->
+  <xacro:property name="chassis_half_length" value="\${chassis_length/2}"/>
+  <xacro:property name="chassis_half_width" value="\${chassis_width/2}"/>
+  <xacro:property name="chassis_z_offset" value="\${ground_clearance + chassis_height/2}"/>
+
+  ${robotConfig.driveType === 'mecanum' ? `
+  <xacro:property name="wheel_separation_length" value="${robotConfig.wheels.separationLength}"/>
+  <xacro:property name="wheel_separation_width" value="${robotConfig.wheels.separationWidth}"/>
+  <xacro:property name="wheel_x_offset" value="\${wheel_separation_length/2}"/>
+  <xacro:property name="wheel_y_offset" value="\${wheel_separation_width/2}"/>
+  ` : `
+  <xacro:property name="wheel_separation" value="${robotConfig.wheels.separation}"/>
+  <xacro:property name="wheel_y_offset" value="\${wheel_separation/2}"/>
+  `}
+
+  <!-- Define Colors -->
+  <material name="white">
+    <color rgba="1 1 1 1" />
+  </material>
+
+  <material name="green">
+    <color rgba="0.2 0.9 0.2 1"/>
+  </material>
+
+  <material name="grey">
+    <color rgba="0.5 0.5 0.5 1.0" />
+  </material>
+
+  <!-- Base link -->
+  <link name="base_link">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.1"/>
+      <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001"/>
+    </inertial>
+  </link>
+
+  <joint name="base_to_chassis" type="fixed">
+    <parent link="base_link"/>
+    <child link="chassis_link"/>
+    <origin xyz="0 0 \${chassis_z_offset}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Chassis -->
+  <link name="chassis_link">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="${robotConfig.chassis.mass}"/>
+      <inertia
+        ixx="${(1/12)*robotConfig.chassis.mass*(robotConfig.chassis.width**2 + robotConfig.chassis.height**2)}"
+        ixy="0.0" ixz="0.0"
+        iyy="${(1/12)*robotConfig.chassis.mass*(robotConfig.chassis.length**2 + robotConfig.chassis.height**2)}"
+        iyz="0.0"
+        izz="${(1/12)*robotConfig.chassis.mass*(robotConfig.chassis.length**2 + robotConfig.chassis.width**2)}"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="\${chassis_length} \${chassis_width} \${chassis_height}"/>
+      </geometry>
+      <material name="green"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>

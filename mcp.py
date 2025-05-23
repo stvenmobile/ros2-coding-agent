@@ -1,22 +1,38 @@
 # === File: mcp.py ===
 
-# Standard library
+# Standard library imports
 import os
 import re
 import sys
-from pathlib import Path
-from datetime import datetime
 import warnings
 import readline
 import atexit
+from pathlib import Path
+from datetime import datetime
 
-# Third-party packages
+# Third-party imports
+from langchain.agents import initialize_agent, AgentType, AgentExecutor
+from langchain_community.tools import ReadFileTool, WriteFileTool, ListDirectoryTool
+from langchain_openai import ChatOpenAI
 from langchain_core._api.deprecation import LangChainDeprecationWarning
 
+# Local module imports
+from config import WKSPACE, EXCLUDE_DIRS
+import tools
+import backup_utils
+from filetracker import FileChangeTracker
+
+# Set up logging and history
 log_output = open("langchain_warnings.log", "a")
 histfile = Path.home() / ".mcp_history"
 
-# Load history if available
+# Configure warnings
+def log_warning(message, category, filename, lineno, file=None, line=None):
+    print(f"{filename}:{lineno}: {category.__name__}: {message}", file=log_output)
+
+warnings.showwarning = log_warning
+
+# Set up command history
 try:
     readline.read_history_file(histfile)
 except FileNotFoundError:
@@ -25,23 +41,6 @@ except FileNotFoundError:
 # Save history on exit
 atexit.register(readline.write_history_file, histfile)
 
-
-def log_warning(message, category, filename, lineno, file=None, line=None):
-    print(f"{filename}:{lineno}: {category.__name__}: {message}", file=log_output)
-
-warnings.showwarning = log_warning
-
-from langchain.agents import initialize_agent, AgentType, AgentExecutor
-from langchain_community.tools import ReadFileTool, WriteFileTool, ListDirectoryTool
-from langchain_openai import ChatOpenAI
-
-# Local modules
-from config import WKSPACE, EXCLUDE_DIRS
-import tools
-import backup_utils
-from filetracker import FileChangeTracker
-
-
 # Set up logging
 log_file = Path("mcp_command.log")
 def log_command(command: str):
@@ -49,6 +48,7 @@ def log_command(command: str):
     with open(log_file, "a") as f:
         f.write(f"[{timestamp}] {command}\n")
 
+# Function definitions
 def list_files_recursive(start_dir=WKSPACE, extensions=None, exclude_dirs=None):
     """Recursively list files under the workspace, optionally filtering by extension and excluding dirs."""
     start_dir = Path(start_dir)
@@ -67,7 +67,34 @@ def list_files_recursive(start_dir=WKSPACE, extensions=None, exclude_dirs=None):
                 results.append(rel_path)
     return results
 
-
+def run_fix_with_confirmation(fix_type, file_path):
+    """Run a fix tool after user confirmation."""
+    while True:
+        confirm = input(f"\n⚠️ Apply automatic {fix_type} fixes to {file_path}? [y/n]: ").lower()
+        if confirm in ['y', 'yes']:
+            print(f"✅ Applying {fix_type} fixes...")
+            if fix_type == "flake8":
+                result = fix_flake8_tool._run(file_path)
+            elif fix_type == "docstring":
+                result = fix_docstrings_tool._run(file_path)
+            print(result)
+            
+            # Update file tracker
+            changes = tracker.diff()
+            tracker.snapshot()
+            
+            # Show file change status
+            if changes:
+                print(f"\n📄 File changes detected: {len(changes)}")
+            else:
+                print("\n✅ No file changes detected.")
+                
+            return True
+        elif confirm in ['n', 'no']:
+            print(f"❌ No changes applied to {file_path}.")
+            return False
+        else:
+            print("Please answer 'y' or 'n'.")
 
 # Load OpenAI API key from a file
 key_file = Path("/etc/mcp/conf/.apikey")
@@ -112,18 +139,10 @@ llm = ChatOpenAI(
 read_tool = ReadFileTool(root_dir=str(WKSPACE))
 write_tool = tools.WriteFileSingleInputTool()
 list_tool = ListDirectoryTool(root_dir=str(WKSPACE))
-
-# Use the new, separate analysis and fix tools
 analyze_flake8_tool = tools.AnalyzeFlake8Tool()
 fix_flake8_tool = tools.FixFlake8Tool()
 analyze_docstrings_tool = tools.AnalyzePydocstyleTool()
 fix_docstrings_tool = tools.FixPydocstyleTool()
-
-# Old tools - kept for backward compatibility, but redirected to analyze-only by default
-flake8_tool = tools.RunFlake8Tool()
-docstyle_tool = tools.RunDocstyleTool()
-
-# Backup tools
 backup_tool = backup_utils.FileBackupTool()
 restore_tool = backup_utils.FileRestoreTool()
 list_backups_tool = backup_utils.ListBackupsTool()
@@ -133,21 +152,14 @@ tool_list = [
     read_tool, 
     write_tool, 
     list_tool, 
-    
-    # Analysis tools only - fix tools will be managed by the main loop with confirmation
     analyze_flake8_tool,
+    fix_flake8_tool,
     analyze_docstrings_tool,
-    
-    # Backward compatibility tools
-    flake8_tool,
-    docstyle_tool,
-    
-    # Backup tools
+    fix_docstrings_tool,
     backup_tool,
     restore_tool,
     list_backups_tool
 ]
-
 
 # Initialize agent
 agent_executor: AgentExecutor = initialize_agent(
@@ -164,36 +176,7 @@ agent_executor: AgentExecutor = initialize_agent(
 tracker = FileChangeTracker(WKSPACE)
 tracker.snapshot()
 
-# Function to run fix tools with confirmation
-def run_fix_with_confirmation(fix_type, file_path):
-    """Run a fix tool after user confirmation."""
-    while True:
-        confirm = input(f"\n⚠️ Apply automatic {fix_type} fixes to {file_path}? [y/n]: ").lower()
-        if confirm in ['y', 'yes']:
-            print(f"✅ Applying {fix_type} fixes...")
-            if fix_type == "flake8":
-                result = fix_flake8_tool._run(file_path)
-            elif fix_type == "docstring":
-                result = fix_docstrings_tool._run(file_path)
-            print(result)
-            
-            # Update file tracker
-            changes = tracker.diff()
-            tracker.snapshot()
-            
-            # Show file change status
-            if changes:
-                print(f"\n📄 File changes detected: {len(changes)}")
-            else:
-                print("\n✅ No file changes detected.")
-                
-            return True
-        elif confirm in ['n', 'no']:
-            print(f"❌ No changes applied to {file_path}.")
-            return False
-        else:
-            print("Please answer 'y' or 'n'.")
-
+# Main execution
 if __name__ == "__main__":
     print(f"MCP AI Agent ready. Monitoring {WKSPACE}")
     print("NEW TOOLS AVAILABLE:")
@@ -235,16 +218,24 @@ if __name__ == "__main__":
                     parts = user_input.split("write_changes")
                     if len(parts) > 1:
                         file_path = parts[1].strip()
+                        # Remove 'on' prefix if present
+                        if file_path.startswith("on "):
+                            file_path = file_path[3:].strip()
                     else:
                         file_path = parts[0].replace("run flake8_", "").strip()
+                        # Remove 'on' prefix if present
+                        if file_path.startswith("on "):
+                            file_path = file_path[3:].strip()
                     
                     # First run analysis
                     print("🔍 First analyzing issues...")
                     analysis_result = analyze_flake8_tool._run(file_path)
                     print(analysis_result)
                     
-                    # Then ask for confirmation
-                    run_fix_with_confirmation("flake8", file_path)
+                    # Only show confirmation prompt if file was found
+                    if "Could not find" not in analysis_result and "File not found" not in analysis_result:
+                        # Then ask for confirmation
+                        run_fix_with_confirmation("flake8", file_path)
                     continue
                 else:
                     print("⚠️ Using 'analyze_flake8' for safer operation...")
@@ -257,16 +248,24 @@ if __name__ == "__main__":
                     parts = user_input.split("write_changes")
                     if len(parts) > 1:
                         file_path = parts[1].strip()
+                        # Remove 'on' prefix if present
+                        if file_path.startswith("on "):
+                            file_path = file_path[3:].strip()
                     else:
                         file_path = parts[0].replace("run docstyle_", "").strip()
+                        # Remove 'on' prefix if present
+                        if file_path.startswith("on "):
+                            file_path = file_path[3:].strip()
                     
                     # First run analysis
                     print("🔍 First analyzing issues...")
                     analysis_result = analyze_docstrings_tool._run(file_path)
                     print(analysis_result)
                     
-                    # Then ask for confirmation
-                    run_fix_with_confirmation("docstring", file_path)
+                    # Only show confirmation prompt if file was found
+                    if "File not found" not in analysis_result and "Could not find" not in analysis_result:
+                        # Then ask for confirmation
+                        run_fix_with_confirmation("docstring", file_path)
                     continue
                 else:
                     print("⚠️ Using 'analyze_docstrings' for safer operation...")
@@ -277,26 +276,38 @@ if __name__ == "__main__":
                 # Extract file path
                 file_path = user_input.replace("fix_flake8", "").strip()
                 
+                # Remove 'on' prefix if present
+                if file_path.startswith("on "):
+                    file_path = file_path[3:].strip()
+                
                 # First run analysis
                 print("🔍 First analyzing issues...")
                 analysis_result = analyze_flake8_tool._run(file_path)
                 print(analysis_result)
                 
-                # Then ask for confirmation
-                run_fix_with_confirmation("flake8", file_path)
+                # Only show confirmation prompt if file was found
+                if "Could not find" not in analysis_result and "File not found" not in analysis_result:
+                    # Then ask for confirmation
+                    run_fix_with_confirmation("flake8", file_path)
                 continue
                 
             if user_input.lower().startswith("fix_docstrings"):
                 # Extract file path
                 file_path = user_input.replace("fix_docstrings", "").strip()
                 
+                # Remove 'on' prefix if present
+                if file_path.startswith("on "):
+                    file_path = file_path[3:].strip()
+                
                 # First run analysis
                 print("🔍 First analyzing issues...")
                 analysis_result = analyze_docstrings_tool._run(file_path)
                 print(analysis_result)
                 
-                # Then ask for confirmation
-                run_fix_with_confirmation("docstring", file_path)
+                # Only show confirmation prompt if file was found
+                if "File not found" not in analysis_result and "Could not find" not in analysis_result:
+                    # Then ask for confirmation
+                    run_fix_with_confirmation("docstring", file_path)
                 continue
 
             # Run the agent to process the command (for all other commands)
